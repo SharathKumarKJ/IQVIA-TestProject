@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <link href="./bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="../css/bootstrap-datetimepicker.min.css" rel="stylesheet" media="screen">
+</head>
+
+<body>
+<div class="container">
+  <div class="row">
+    <form class="form-group col-sm-12" role="form">
+      <label class="col-sm-2 control-label">Select Times</label>
+  
+      <div class="col-sm-8">
+        <div class="col-sm-6 start-date">
+          <div class='input-group date' id="time-start">
+            <input type='text' class="form-control" placeholder="Start Time" readonly>
+            <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+          </div>
+        </div>
+  
+        <div class="col-sm-6 end-date">
+          <div class='input-group date' id="time-end">
+            <input type='text' class="form-control" placeholder="End Time" readonly>
+            <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+          </div>
+        </div>
+  
+        <p class="help-block time-help">Select start and end times</p>
+      </div>
+  
+      <div class="col-sm-2">
+        <button class="btn btn-default" type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+  
+  <div class="well">
+    Start Time Original: <span id="start-time-before"></span>
+    <hr>
+    Start Time Adjusted: <span id="start-time-adjusted"></span>
+    <hr>
+    End Time Original: <span id="end-time-before"></span>
+    <hr>
+    End Time Adjusted: <span id="end-time-adjusted"></span>
+  </div>
+</div>
+
+<script type="text/javascript" src="./jquery/jquery-1.8.3.min.js" charset="UTF-8"></script>
+<script type="text/javascript" src="./bootstrap/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../js/bootstrap-datetimepicker.js" charset="UTF-8"></script>
+<script type="text/javascript" src="../js/locales/bootstrap-datetimepicker.fr.js" charset="UTF-8"></script>
+<script type="text/javascript">
+  $('#time-start').datetimepicker({
+    format: 'mm/dd/yyyy hh:ii',
+    autoclose: true,
+    pickerPosition: "bottom-left",
+    maxView: 3,
+    minuteStep: 1,
+    endDate: new Date()
+}).on("changeDate", function (e) {
+    $('#start-time-before').html(e.date); // Log
+    var TimeZoned = new Date(e.date.setTime(e.date.getTime() + (e.date.getTimezoneOffset() * 60000)));
+    $('#time-end').datetimepicker('setStartDate', TimeZoned);
+    $('#time-start').datetimepicker('setDate', TimeZoned);
+    $('#start-time-adjusted').html(TimeZoned); // Log
+});
+
+$('#time-end').datetimepicker({
+    format: 'mm/dd/yyyy hh:ii',
+    autoclose: true,
+    pickerPosition: "bottom-left",
+    maxView: 3,
+    minuteStep: 1,
+    endDate: new Date()
+}).on("changeDate", function (e) {
+    $('#end-time-before').html(e.date); // Log
+    var TimeZoned = new Date(e.date.setTime(e.date.getTime() + (e.date.getTimezoneOffset() * 60000)));
+    $('#time-start').datetimepicker('setEndDate', TimeZoned);
+    $('#time-end').datetimepicker('setDate', TimeZoned);
+    $('#end-time-adjusted').html(e.date); // Log
+});
+</script>
+<style>
+body {
+    padding-top:20px;
+}
+.start-date {
+    padding-left:0;
+}
+.end-date {
+    padding-right:0;
+}
+.date>input:hover,.date>input:hover {
+    cursor:pointer;
+}
+.time-help {
+    margin-top:40px;
+}
+@media(max-width:767px) {
+    .start-date {
+        padding:0 0 5px 0;
+    }
+    .end-date {
+        padding:5px 0 0 0;
+    }
+    .time-help {
+        margin-top:10px;
+    }
+}
+</style>
+
+</body>
+</html>

@@ -1,0 +1,238 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8" />
+    <link href="Content/bootstrap.min.css" rel="stylesheet" />
+    <link href="/css/bootstrap-datetimepicker.min.css" rel="stylesheet" media="screen">
+    <link href="sample in bootstrap v3/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen" />
+</head>
+<body style="padding-top:20px">
+    <div class="col-md-10 col-md-offset-1">
+        <div>
+          
+            <input id="btnLogoff" class="btn btn-success pull-right"
+                   type="button" value="Log Off" />
+
+            <span id="spanUsername" class="text-muted col-lg-push-3"></span>
+
+        </div>
+        <div>
+            <br />
+        </div>
+        <div>
+            <div class="container">
+                <div class="row">
+                    <form class="form-group col-sm-12" role="form">
+                        <label class="col-sm-2 control-label">Select Times</label>
+
+                        <div class="col-sm-8">
+                            <div class="col-sm-6 start-date">
+                                <div class='input-group date' id="time-start">
+                                    <input type='text' id ="txtStartDate"class="form-control" placeholder="Start Time" readonly>
+                                    <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                                </div>
+                            </div>
+
+                            <div class="col-sm-6 end-date">
+                                <div class='input-group date' id="time-end">
+                                    <input type='text' id="txtEndDate" class="form-control" placeholder="End Time" readonly>
+                                    <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                                </div>
+                            </div>
+
+                        </div>
+                        <input id="btnLoadSwagger" class="btn btn-success"
+                               type="button" value="Load Swagger" />
+
+                     
+                    </form>
+                </div>
+            </div>
+            <!--<input type="text" id="txtStartDate" placeholder="Start Date" />
+
+            <input type="text" id="txtEndDate" placeholder="End Date" />-->
+        </div>
+        <div id="divData" class="well hidden">
+            <table class="table table-hover" id="tblData">
+                <thead>
+                    <tr class="success">
+                        <td>ID</td>
+                        <td>Stamp</td>
+                        <td>Text</td>
+
+                    </tr>
+                </thead>
+                <tbody id="tblBody"></tbody>
+            </table>
+        </div>
+        <div class="modal fade" tabindex="-1" id="errorModal"
+             data-keyboard="false" data-backdrop="static">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">
+                            &times;
+                        </button>
+                        <h4 class="modal-title">Session Expired</h4>
+                    </div>
+                    <div class="modal-body ">
+                        <form>
+                            <h2 class="modal-title">Session has been expired, Please login again..</h2>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-danger"
+                                data-dismiss="modal">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="divError" class="alert alert-danger collapse">
+            <a id="linkClose" href="#" class="close">&times;</a>
+            <div id="divErrorText"></div>
+        </div>
+    </div>
+
+    <script src="Scripts/jquery-1.10.2.min.js"></script>
+    <script src="Scripts/bootstrap.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css">
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="/js/bootstrap-datetimepicker.js" charset="UTF-8"></script>
+    <script type="text/javascript" src="/js/bootstrap-datetimepicker.fr.js" charset="UTF-8"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            $('#spanUsername').text('Welcome ' + sessionStorage.getItem('userName'));
+
+            if (sessionStorage.getItem('accessToken') == null) {
+
+                window.location.href = "Login.html";
+            }
+
+
+            $('#linkClose').click(function () {
+                $('#divError').hide('fade');
+            });
+
+            $('#errorModal').on('hidden.bs.modal', function () {
+                window.location.href = "Login.html";
+            });
+
+            $('#btnLoadSwagger').click(function () {
+
+                var startDate = $('#txtStartDate').val();
+                var endDate = $('#txtEndDate').val();
+
+                $.ajax({
+
+                    url: 'api/Swaggers?startDate=' + startDate + '&endDate=' + endDate,
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer '
+                            + sessionStorage.getItem("accessToken")
+                    },
+
+                    success: function (data) {
+                        $('#divData').removeClass('hidden');
+                        $('#tblBody').empty();
+                        $.each(data, function (index, value) {
+                            var row =
+                                $(' <tr><td>' + value.Id + '</td><td>'
+                                    + value.Stamp + '</td><td>'
+                                    + value.Text + '</td></tr>');
+                            $('#tblData').append(row);
+                        });
+                        $('#tblData').DataTable();
+                    },
+                    error: function (jQXHR) {
+                        if (jQXHR.status == "401") {
+                            $('#errorModal').modal('show');
+                        }
+                        else {
+                            $('#divErrorText').text(jQXHR.responseText);
+                            $('#divError').show('fade');
+                        }
+                    }
+                });
+            });
+
+
+            $('#btnLogoff').click(function () {
+                sessionStorage.removeItem("accessToken");
+                window.location.href = "Login.html";
+            });
+        });
+
+        $('#time-start').datetimepicker({
+            format: 'mm/dd/yyyy hh:ii',
+            autoclose: true,
+            pickerPosition: "bottom-left",
+            maxView: 3,
+            minuteStep: 1,
+            endDate: new Date()
+        }).on("changeDate", function (e) {
+            $('#start-time-before').html(e.date); // Log
+            var TimeZoned = new Date(e.date.setTime(e.date.getTime() + (e.date.getTimezoneOffset() * 60000)));
+            $('#time-end').datetimepicker('setStartDate', TimeZoned);
+            $('#time-start').datetimepicker('setDate', TimeZoned);
+            $('#start-time-adjusted').html(TimeZoned); // Log
+        });
+
+        $('#time-end').datetimepicker({
+            format: 'mm/dd/yyyy hh:ii',
+            autoclose: true,
+            pickerPosition: "bottom-left",
+            maxView: 3,
+            minuteStep: 1,
+            endDate: new Date()
+        }).on("changeDate", function (e) {
+            $('#end-time-before').html(e.date); // Log
+            var TimeZoned = new Date(e.date.setTime(e.date.getTime() + (e.date.getTimezoneOffset() * 60000)));
+            $('#time-start').datetimepicker('setEndDate', TimeZoned);
+            $('#time-end').datetimepicker('setDate', TimeZoned);
+            $('#end-time-adjusted').html(e.date); // Log
+        });
+
+    </script>
+    <style>
+
+        body {
+            padding-top: 20px;
+        }
+
+        .start-date {
+            padding-left: 0;
+        }
+
+        .end-date {
+            padding-right: 0;
+        }
+
+        .date > input:hover, .date > input:hover {
+            cursor: pointer;
+        }
+
+        .time-help {
+            margin-top: 40px;
+        }
+
+        @media(max-width:767px) {
+            .start-date {
+                padding: 0 0 5px 0;
+            }
+
+            .end-date {
+                padding: 5px 0 0 0;
+            }
+
+            .time-help {
+                margin-top: 10px;
+            }
+        }
+    </style>
+
+</body>
+</html>
