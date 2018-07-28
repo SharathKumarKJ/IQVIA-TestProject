@@ -12,13 +12,15 @@ using System.Web;
 
 namespace IQVIA.ClientRequestor
 {
+    public enum ProcessRequestBy {Day,Hour,Second };
+
     public static class Client
     {
-        static HttpClient _client = new HttpClient();
-
-        static List<Swagger> _swaggers;
-
-        static string _uri;
+        private const string _dateTimeOffsetFormat = "yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz";
+        private const int _maxResponse = 100;
+        private static HttpClient _client = new HttpClient();
+        private static List<Swagger> _swaggers;
+        private static string _uri;
 
         public static void SetURI(string uri)
         {
@@ -27,52 +29,44 @@ namespace IQVIA.ClientRequestor
 
         public static async Task<List<Swagger>> GetSwaggerAsync(string startDate,string endDate)
         {
-          return await RunAsync(startDate,endDate);
+          return await ProcessRequestAsync(startDate,endDate);
         }
 
-        private static async Task<List<Swagger>> RunAsync(string startDate, string endDate)
+        private static async Task<List<Swagger>> ProcessRequestAsync(string startDate, string endDate)
         {
             _swaggers = new List<Swagger>();
 
-            DateTimeOffset startDateTimeOffset; //new DateTimeOffset(2016, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            DateTimeOffset startDateTimeOffset = DateTimeOffsetParse(startDate); //new DateTimeOffset(2016, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
-            var s1 = DateTimeOffset.TryParse(startDate, null as IFormatProvider,
-                            DateTimeStyles.AssumeLocal,
-                            out startDateTimeOffset);
-
-            DateTimeOffset endDateDateTimeOffset;  //new DateTimeOffset(2016, 1, 2, 23, 59, 0, TimeSpan.Zero);
-
-            var s2 = DateTimeOffset.TryParse(endDate, null as IFormatProvider,
-                           DateTimeStyles.AssumeLocal,
-                           out endDateDateTimeOffset);
+            DateTimeOffset endDateDateTimeOffset = DateTimeOffsetParse(endDate); //new DateTimeOffset(2016, 1, 2, 23, 59, 0, TimeSpan.Zero);
 
             var daysDifference = endDateDateTimeOffset.Subtract(startDateTimeOffset).TotalDays;
 
             for (var dayCount = 0; dayCount < Math.Round(daysDifference); dayCount++)
             {
-                var parameters = "startDate=" + HttpUtility.UrlEncode(startDateTimeOffset.AddDays(dayCount).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz")) + "&endDate=" + HttpUtility.UrlEncode(startDateTimeOffset.AddDays(dayCount + 1).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz"));
+                var queryParameter = GetParameter(ref startDateTimeOffset, dayCount, ProcessRequestBy.Day);
 
-                var parsedResult = await ProcessRequest(parameters);
+                var parsedResult = await ProcessRequest(queryParameter);
 
-                if (parsedResult.Count() >= 100)
+                if (parsedResult.Count() >= _maxResponse)
                 {
                     var hoursDifference = startDateTimeOffset.AddDays(dayCount).Subtract(startDateTimeOffset.AddDays(dayCount + 1)).TotalHours;
 
                     for (var hourCount = 0; hourCount < Math.Round(hoursDifference); hourCount++)
                     {
-                        parameters = "startDate=" + HttpUtility.UrlEncode(startDateTimeOffset.AddHours(hourCount).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz")) + "&endDate=" + HttpUtility.UrlEncode(startDateTimeOffset.AddHours(hourCount + 1).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz"));
+                        queryParameter = GetParameter(ref startDateTimeOffset, hourCount, ProcessRequestBy.Hour);
 
-                        parsedResult = await ProcessRequest(parameters);
+                        parsedResult = await ProcessRequest(queryParameter);
 
-                        if (parsedResult.Count >= 100)
+                        if (parsedResult.Count >= _maxResponse)
                         {
                             var secoundDifference = startDateTimeOffset.AddDays(dayCount).Subtract(startDateTimeOffset.AddDays(dayCount + 1)).Seconds;
 
                             for (var secondCount = 0; secondCount < secoundDifference; secondCount++)
                             {
-                                parameters = "startDate=" + HttpUtility.UrlEncode(startDateTimeOffset.AddSeconds(secondCount).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz")) + "&endDate=" + HttpUtility.UrlEncode(startDateTimeOffset.AddSeconds(secondCount + 1).ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'.'fffzzz"));
+                                queryParameter = GetParameter(ref startDateTimeOffset, secondCount, ProcessRequestBy.Second);
 
-                                parsedResult = await ProcessRequest(parameters);
+                                parsedResult = await ProcessRequest(queryParameter);
 
                                 _swaggers.AddRange(parsedResult);
                             }
@@ -93,12 +87,46 @@ namespace IQVIA.ClientRequestor
             return _swaggers;
         }
 
-        private static async Task<List<Swagger>> ProcessRequest(string parameters)
+        private static DateTimeOffset DateTimeOffsetParse(string date)
         {
-            HttpResponseMessage response = await _client.GetAsync(_uri + parameters);
+            DateTimeOffset dateTimeOffset;
+            DateTimeOffset.TryParse(date, null as IFormatProvider,
+                           DateTimeStyles.AssumeLocal,
+                           out dateTimeOffset);
+            return dateTimeOffset;
+        }
+
+        private static string GetParameter(ref DateTimeOffset startDateTimeOffset, int count, ProcessRequestBy processRequestBy)
+        {
+            switch (processRequestBy)
+            {
+                case ProcessRequestBy.Day:
+                    return "startDate=" 
+                        + HttpUtility.UrlEncode(startDateTimeOffset.AddDays(count).ToString(_dateTimeOffsetFormat)) 
+                        + "&endDate=" 
+                        + HttpUtility.UrlEncode(startDateTimeOffset.AddDays(count + 1).ToString(_dateTimeOffsetFormat));
+
+                case ProcessRequestBy.Hour:
+                    return "startDate=" 
+                        + HttpUtility.UrlEncode(startDateTimeOffset.AddHours(count).ToString(_dateTimeOffsetFormat)) 
+                        + "&endDate=" 
+                        + HttpUtility.UrlEncode(startDateTimeOffset.AddHours(count + 1).ToString(_dateTimeOffsetFormat));
+
+                case ProcessRequestBy.Second:
+                    return "startDate=" 
+                        + HttpUtility.UrlEncode(startDateTimeOffset.AddSeconds(count).ToString(_dateTimeOffsetFormat))
+                        + "&endDate=" 
+                        + HttpUtility.UrlEncode(startDateTimeOffset.AddSeconds(count + 1).ToString(_dateTimeOffsetFormat));
+            }
+            return string.Empty;
+        }
+
+        private static async Task<List<Swagger>> ProcessRequest(string queryParameter)
+        {
+            HttpResponseMessage response = await _client.GetAsync(_uri + queryParameter);
             var jsonString = await response.Content.ReadAsStringAsync();
-            var parsedResult = JsonConvert.DeserializeObject<List<Swagger>>(jsonString);
-            return parsedResult;
+           return JsonConvert.DeserializeObject<List<Swagger>>(jsonString);
+
         }
     }
 }
