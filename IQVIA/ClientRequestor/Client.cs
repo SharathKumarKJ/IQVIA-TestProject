@@ -90,9 +90,16 @@ namespace IQVIA.ClientRequestor
         private static DateTimeOffset DateTimeOffsetParse(string date)
         {
             DateTimeOffset dateTimeOffset;
-            DateTimeOffset.TryParse(date, null as IFormatProvider,
+           if(DateTimeOffset.TryParse(date, null as IFormatProvider,
                            DateTimeStyles.AssumeLocal,
-                           out dateTimeOffset);
+                           out dateTimeOffset))
+            {
+
+            }
+            else
+            {
+                _swaggers.Add(new Swagger() { Id = "Error", Stamp = "Unable to parse Date Time Offeset since it is wrong" });
+            }
             return dateTimeOffset;
         }
 
