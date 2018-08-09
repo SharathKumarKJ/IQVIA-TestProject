@@ -87,10 +87,10 @@ namespace IQVIA.ClientRequestor
             return _swaggers;
         }
 
-        private static DateTimeOffset DateTimeOffsetParse(string date)
+       private static DateTimeOffset DateTimeOffsetParse(string date)
         {
             DateTimeOffset dateTimeOffset;
-           if(DateTimeOffset.TryParse(date, null as IFormatProvider,
+           if(DateTimeOffset.TryParseExact(date, "MM/dd/yyyy HH:mm",null as IFormatProvider,
                            DateTimeStyles.AssumeLocal,
                            out dateTimeOffset))
             {
